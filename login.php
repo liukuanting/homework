@@ -1,0 +1,59 @@
+<?php
+
+declare(strict_types=1);
+
+require __DIR__ . '/lib/bootstrap.php';
+
+render_head('登入 / 註冊', 'login');
+render_header('login');
+?>
+<main class="page-shell auth-shell">
+    <section class="auth-panel glass-card">
+        <div class="section-header stacked">
+            <div>
+                <p class="eyebrow">Account Access</p>
+                <h1>會員登入與管理者登入</h1>
+            </div>
+            <p>使用 Supabase Auth 進行 Email / 密碼登入，登入後會依照 `is_admin` 權限自動導向。</p>
+        </div>
+
+        <div class="auth-tabs">
+            <button type="button" class="tab-button is-active" data-auth-tab="member">會員登入</button>
+            <button type="button" class="tab-button" data-auth-tab="admin">管理者登入</button>
+        </div>
+
+        <div class="auth-grid">
+            <form id="loginForm" class="form-card">
+                <input type="hidden" id="loginMode" value="member">
+                <label>
+                    <span>Email</span>
+                    <input id="loginEmail" type="email" placeholder="name@example.com" required>
+                </label>
+                <label>
+                    <span>密碼</span>
+                    <input id="loginPassword" type="password" placeholder="至少 6 碼" required>
+                </label>
+                <button class="button" type="submit">登入系統</button>
+            </form>
+
+            <form id="registerForm" class="form-card">
+                <label>
+                    <span>姓名</span>
+                    <input id="registerName" type="text" placeholder="王小明" required>
+                </label>
+                <label>
+                    <span>Email</span>
+                    <input id="registerEmail" type="email" placeholder="name@example.com" required>
+                </label>
+                <label>
+                    <span>密碼</span>
+                    <input id="registerPassword" type="password" placeholder="至少 6 碼" required>
+                </label>
+                <button class="button button-secondary" type="submit">註冊會員</button>
+            </form>
+        </div>
+
+        <div id="authMessage" class="message-box"></div>
+    </section>
+</main>
+<?php render_footer(); ?>
