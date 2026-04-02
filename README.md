@@ -1,68 +1,62 @@
 # 羽球臨打報名系統
 
-這是一個以 `PHP + JavaScript + Supabase` 製作的羽球臨打網站起始專案，包含：
+這是一個以 `HTML + JavaScript + Supabase` 製作的羽球臨打網站，適合直接部署到靜態網站平台，例如 Vercel。
 
-- 首頁：顯示場次、時間、級數、價格、剩餘名額
-- 登入頁：會員註冊、會員登入、管理者登入
-- 會員中心：場次瀏覽、線上報名、訂單紀錄
-- 管理後台：行程管理、檔期管理、訂單查詢
+## 主要頁面
 
-## 你需要填的設定
+- `index.html`：首頁
+- `login.html`：會員登入 / 管理者登入 / 註冊
+- `dashboard.html`：會員中心
+- `admin.html`：管理後台
 
-打開 `config.php`，填入：
+## Supabase 設定
 
-- `SUPABASE_URL`
-- `SUPABASE_ANON_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY`
+請打開 `assets/config.js`，填入：
 
-正式上線建議改用伺服器環境變數，不要把金鑰直接寫在檔案中。
+- `url`
+- `anonKey`
 
-## 預期的 Supabase 資料表
+注意：
 
-### `profiles`
+- 這是純前端網站，只能使用 `anon key`
+- 不要把 `service role key` 放到前端
 
-- `id` uuid primary key，對應 `auth.users.id`
-- `full_name` text
-- `email` text
-- `is_admin` boolean default false
+## 資料表
 
-### `tours`
+目前前端預期使用下列表：
 
-- `id` uuid primary key default `gen_random_uuid()`
-- `title` text
-- `description` text
-- `level` text
-- `price` integer
-- `location` text
-- `created_at` timestamptz default `now()`
+- `profiles`
+- `tours`
+- `sessions`
+- `orders`
 
-### `sessions`
+對應欄位可參考 `supabase_schema.sql`。
 
-- `id` uuid primary key default `gen_random_uuid()`
-- `tour_id` uuid references `tours(id)`
-- `start_time` timestamptz
-- `capacity` integer
-- `remaining_slots` integer
-- `created_at` timestamptz default `now()`
+## 部署
 
-### `orders`
+這個版本不需要 PHP，直接部署整個資料夾即可。
 
-- `id` uuid primary key default `gen_random_uuid()`
-- `user_id` uuid references `auth.users(id)`
-- `tour_id` uuid references `tours(id)`
-- `session_id` uuid references `sessions(id)`
-- `quantity` integer
-- `total_amount` integer
-- `created_at` timestamptz default `now()`
+如果你使用 Vercel：
+
+1. 匯入專案
+2. 不需要安裝 PHP
+3. 直接部署
+
+專案內的 `vercel.json` 已設定 `cleanUrls`。
 
 ## 重要提醒
 
-目前報名流程是先寫入 `orders`，再更新 `sessions.remaining_slots`。流程可用，但正式上線建議改成 Supabase SQL function 做交易式扣名額，避免多人同時搶位時發生競爭條件。
+因為這版是純前端直接連 Supabase，所以你一定要在 Supabase 設定好 RLS 政策，尤其是：
 
-## 本機啟動
+- 會員只能讀寫自己的 `profiles`
+- 會員只能新增自己的 `orders`
+- 一般會員只能讀 `tours` / `sessions`
+- 只有管理者可以新增、修改、刪除 `tours` / `sessions`
+- 只有管理者可以查看全部 `orders`
 
-```powershell
-php -S localhost:8000
-```
+另外，目前報名流程仍然是：
 
-開啟 `http://localhost:8000/index.php` 即可。
+1. 新增 `orders`
+2. 更新 `sessions.remaining_slots`
+
+正式上線前，建議你改成 Supabase RPC / SQL function 做原子扣名額，避免多人同時搶位造成超賣。
