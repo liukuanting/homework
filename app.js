@@ -90,6 +90,10 @@ async function ensureProfile(user) {
 
   if (!profileResult.error && profileResult.data) return profileResult.data;
 
+  if (profileResult.error) {
+    throw new Error(`Profile read failed: ${profileResult.error.message}`);
+  }
+
   const payload = {
     id: user.id,
     full_name: user.user_metadata?.full_name || user.email?.split("@")[0] || "member",
@@ -466,7 +470,11 @@ async function loadAdminPage() {
     return;
   }
 
+  const freshProfile = await ensureProfile(appState.user);
+  appState.profile = freshProfile;
+
   if (!appState.profile?.is_admin) {
+    alert("這個帳號目前不是管理者。請先到 Supabase 的 profiles 資料表，把 is_admin 改成 true。");
     window.location.href = "login.html";
     return;
   }
