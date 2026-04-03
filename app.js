@@ -1,6 +1,9 @@
 const cfg = window.SUPABASE_CONFIG || {};
 const page = document.body?.dataset?.page || "";
 const currency = cfg.currency || "NT$";
+const adminEmails = Array.isArray(cfg.adminEmails)
+  ? cfg.adminEmails.map((email) => String(email || "").trim().toLowerCase())
+  : [];
 const supabaseClient =
   window.supabase && cfg.url && cfg.anonKey
     ? window.supabase.createClient(cfg.url, cfg.anonKey)
@@ -62,6 +65,11 @@ function bindGlobalUi() {
     }
     window.location.href = "login.html";
   });
+}
+
+function hasAdminAccess() {
+  const email = String(appState.user?.email || "").trim().toLowerCase();
+  return Boolean(appState.profile?.is_admin) || adminEmails.includes(email);
 }
 
 async function refreshIdentity() {
@@ -318,7 +326,7 @@ async function handleLogin(event) {
     appState.session = data.session;
     appState.profile = await ensureProfile(data.user);
 
-    if (mode === "admin" && !appState.profile?.is_admin) {
+    if (mode === "admin" && !hasAdminAccess()) {
       throw new Error("This account is not an admin.");
     }
 
@@ -465,6 +473,7 @@ async function loadAdminPage() {
     hasSession: Boolean(appState.session),
     profileLoaded: Boolean(appState.profile),
     isAdmin: Boolean(appState.profile?.is_admin),
+    emailAdminMatch: adminEmails.includes(String(appState.user?.email || "").trim().toLowerCase()),
   });
 
   if (!appState.user) {
@@ -472,11 +481,12 @@ async function loadAdminPage() {
       stage: "no_user",
       hasUser: false,
       userEmail: "",
-      userId: "",
-      hasSession: Boolean(appState.session),
-      profileLoaded: Boolean(appState.profile),
-      isAdmin: false,
-    });
+        userId: "",
+        hasSession: Boolean(appState.session),
+        profileLoaded: Boolean(appState.profile),
+        isAdmin: false,
+        emailAdminMatch: false,
+      });
     return;
   }
 
@@ -493,9 +503,10 @@ async function loadAdminPage() {
     profileId: appState.profile?.id || "",
     profileEmail: appState.profile?.email || "",
     isAdmin: Boolean(appState.profile?.is_admin),
+    emailAdminMatch: adminEmails.includes(String(appState.user?.email || "").trim().toLowerCase()),
   });
 
-  if (!appState.profile?.is_admin) {
+  if (!hasAdminAccess()) {
     renderAdminDebug({
       stage: "not_admin",
       hasUser: true,
@@ -506,6 +517,7 @@ async function loadAdminPage() {
       profileId: appState.profile?.id || "",
       profileEmail: appState.profile?.email || "",
       isAdmin: Boolean(appState.profile?.is_admin),
+      emailAdminMatch: adminEmails.includes(String(appState.user?.email || "").trim().toLowerCase()),
     });
     const panel = document.getElementById("tourTable");
     if (panel) {
@@ -547,6 +559,7 @@ function renderAdminDebug(data) {
     ["profileId", escapeHtml(data.profileId || "")],
     ["profileEmail", escapeHtml(data.profileEmail || "")],
     ["isAdmin", escapeHtml(String(Boolean(data.isAdmin)))],
+    ["emailAdminMatch", escapeHtml(String(Boolean(data.emailAdminMatch)))],
   ];
 
   panel.innerHTML = renderTable(["key", "value"], rows);
