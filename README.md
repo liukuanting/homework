@@ -11,7 +11,7 @@
 
 ## 設定方式
 
-請先打開 `assets/config.js`，填入：
+請先打開 `config.js`，填入：
 
 - `url`
 - `anonKey`
