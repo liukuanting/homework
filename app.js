@@ -55,6 +55,11 @@ async function startApp() {
 function bindGlobalUi() {
   document.getElementById("logoutButton")?.addEventListener("click", async () => {
     await supabaseClient.auth.signOut();
+    try {
+      window.localStorage.removeItem("admin_debug_snapshot");
+    } catch (_error) {
+      // ignore
+    }
     window.location.href = "login.html";
   });
 }
@@ -469,6 +474,7 @@ async function loadAdminPage() {
     stage: "enter_admin_page",
     hasUser: Boolean(appState.user),
     userEmail: appState.user?.email || "",
+    userId: appState.user?.id || "",
     hasSession: Boolean(appState.session),
     profileLoaded: Boolean(appState.profile),
     isAdmin: Boolean(appState.profile?.is_admin),
@@ -476,14 +482,14 @@ async function loadAdminPage() {
 
   if (!appState.user) {
     renderAdminDebug({
-      stage: "redirect_login_no_user",
+      stage: "no_user",
       hasUser: false,
       userEmail: "",
+      userId: "",
       hasSession: Boolean(appState.session),
       profileLoaded: Boolean(appState.profile),
       isAdmin: false,
     });
-    window.location.href = "login.html";
     return;
   }
 
@@ -494,6 +500,7 @@ async function loadAdminPage() {
     stage: "profile_loaded",
     hasUser: true,
     userEmail: appState.user?.email || "",
+    userId: appState.user?.id || "",
     hasSession: Boolean(appState.session),
     profileLoaded: Boolean(appState.profile),
     profileId: appState.profile?.id || "",
@@ -503,17 +510,20 @@ async function loadAdminPage() {
 
   if (!appState.profile?.is_admin) {
     renderAdminDebug({
-      stage: "redirect_login_not_admin",
+      stage: "not_admin",
       hasUser: true,
       userEmail: appState.user?.email || "",
+      userId: appState.user?.id || "",
       hasSession: Boolean(appState.session),
       profileLoaded: Boolean(appState.profile),
       profileId: appState.profile?.id || "",
       profileEmail: appState.profile?.email || "",
       isAdmin: Boolean(appState.profile?.is_admin),
     });
-    alert("這個帳號目前不是管理者。請先到 Supabase 的 profiles 資料表，把 is_admin 改成 true。");
-    window.location.href = "login.html";
+    const panel = document.getElementById("tourTable");
+    if (panel) {
+      panel.innerHTML = '<div class="empty-state">目前登入帳號不是管理者，請先把上方除錯資訊截圖給我。</div>';
+    }
     return;
   }
 
@@ -535,12 +545,18 @@ async function loadAdminPage() {
 
 function renderAdminDebug(data) {
   const panel = document.getElementById("adminDebugPanel");
+  try {
+    window.localStorage.setItem("admin_debug_snapshot", JSON.stringify(data));
+  } catch (_error) {
+    // ignore
+  }
   if (!panel) return;
 
   const rows = [
     ["stage", escapeHtml(data.stage || "")],
     ["hasUser", escapeHtml(String(Boolean(data.hasUser)))],
     ["userEmail", escapeHtml(data.userEmail || "")],
+    ["userId", escapeHtml(data.userId || "")],
     ["hasSession", escapeHtml(String(Boolean(data.hasSession)))],
     ["profileLoaded", escapeHtml(String(Boolean(data.profileLoaded)))],
     ["profileId", escapeHtml(data.profileId || "")],
