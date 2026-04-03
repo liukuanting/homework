@@ -465,7 +465,24 @@ async function loadMyOrders() {
 }
 
 async function loadAdminPage() {
+  renderAdminDebug({
+    stage: "enter_admin_page",
+    hasUser: Boolean(appState.user),
+    userEmail: appState.user?.email || "",
+    hasSession: Boolean(appState.session),
+    profileLoaded: Boolean(appState.profile),
+    isAdmin: Boolean(appState.profile?.is_admin),
+  });
+
   if (!appState.user) {
+    renderAdminDebug({
+      stage: "redirect_login_no_user",
+      hasUser: false,
+      userEmail: "",
+      hasSession: Boolean(appState.session),
+      profileLoaded: Boolean(appState.profile),
+      isAdmin: false,
+    });
     window.location.href = "login.html";
     return;
   }
@@ -473,7 +490,28 @@ async function loadAdminPage() {
   const freshProfile = await ensureProfile(appState.user);
   appState.profile = freshProfile;
 
+  renderAdminDebug({
+    stage: "profile_loaded",
+    hasUser: true,
+    userEmail: appState.user?.email || "",
+    hasSession: Boolean(appState.session),
+    profileLoaded: Boolean(appState.profile),
+    profileId: appState.profile?.id || "",
+    profileEmail: appState.profile?.email || "",
+    isAdmin: Boolean(appState.profile?.is_admin),
+  });
+
   if (!appState.profile?.is_admin) {
+    renderAdminDebug({
+      stage: "redirect_login_not_admin",
+      hasUser: true,
+      userEmail: appState.user?.email || "",
+      hasSession: Boolean(appState.session),
+      profileLoaded: Boolean(appState.profile),
+      profileId: appState.profile?.id || "",
+      profileEmail: appState.profile?.email || "",
+      isAdmin: Boolean(appState.profile?.is_admin),
+    });
     alert("這個帳號目前不是管理者。請先到 Supabase 的 profiles 資料表，把 is_admin 改成 true。");
     window.location.href = "login.html";
     return;
@@ -493,6 +531,24 @@ async function loadAdminPage() {
   document.getElementById("tourForm")?.addEventListener("submit", saveAdminTour);
   document.getElementById("tourResetButton")?.addEventListener("click", resetAdminForm);
   document.getElementById("refreshOrders")?.addEventListener("click", loadAdminOrders);
+}
+
+function renderAdminDebug(data) {
+  const panel = document.getElementById("adminDebugPanel");
+  if (!panel) return;
+
+  const rows = [
+    ["stage", escapeHtml(data.stage || "")],
+    ["hasUser", escapeHtml(String(Boolean(data.hasUser)))],
+    ["userEmail", escapeHtml(data.userEmail || "")],
+    ["hasSession", escapeHtml(String(Boolean(data.hasSession)))],
+    ["profileLoaded", escapeHtml(String(Boolean(data.profileLoaded)))],
+    ["profileId", escapeHtml(data.profileId || "")],
+    ["profileEmail", escapeHtml(data.profileEmail || "")],
+    ["isAdmin", escapeHtml(String(Boolean(data.isAdmin)))],
+  ];
+
+  panel.innerHTML = renderTable(["key", "value"], rows);
 }
 
 function renderAdminTours() {
