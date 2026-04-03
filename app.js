@@ -103,21 +103,37 @@ async function ensureProfile(user) {
     id: user.id,
     full_name: user.user_metadata?.full_name || user.email?.split("@")[0] || "member",
     email: user.email || "",
-    is_admin: false,
   };
 
-  const upsertResult = await supabaseClient
+  const insertResult = await supabaseClient
     .from("profiles")
-    .upsert(payload, { onConflict: "id" })
+    .insert(payload)
     .select("id, full_name, email, is_admin")
     .single();
 
-  if (upsertResult.error) {
-    console.error(upsertResult.error);
-    return payload;
+  if (insertResult.error) {
+    const duplicate =
+      insertResult.error.code === "23505" ||
+      String(insertResult.error.message || "").toLowerCase().includes("duplicate");
+
+    if (duplicate) {
+      const existingResult = await supabaseClient
+        .from("profiles")
+        .select("id, full_name, email, is_admin")
+        .eq("id", user.id)
+        .single();
+
+      if (existingResult.error) {
+        throw new Error(`Profile reload failed: ${existingResult.error.message}`);
+      }
+
+      return existingResult.data;
+    }
+
+    throw new Error(`Profile create failed: ${insertResult.error.message}`);
   }
 
-  return upsertResult.data;
+  return insertResult.data;
 }
 
 async function fetchTours() {
