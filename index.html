@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>首頁 | 羽球臨打報名系統</title>
-  <meta name="description" content="羽球臨打場次查詢、線上報名、會員與管理後台整合。">
+  <title>羽球臨打報名</title>
+  <meta name="description" content="羽球臨打場次瀏覽、會員登入、即時報名與管理後台。">
   <link rel="stylesheet" href="styles.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
@@ -20,7 +20,8 @@
       <a href="index.html" class="is-active">首頁</a>
       <a href="dashboard.html">會員中心</a>
       <a href="admin.html">管理後台</a>
-      <a href="login.html">登入 / 註冊</a>
+      <a href="login.html">會員登入</a>
+      <a href="register.html">註冊</a>
     </nav>
     <div class="auth-actions">
       <span id="navUserEmail" class="user-pill"></span>
@@ -29,30 +30,25 @@
   </header>
 
   <main class="page-shell">
-    <section class="hero">
+    <section class="hero hero-simple">
       <div class="hero-copy">
         <p class="eyebrow">Badminton Booking</p>
-        <h1>羽球臨打，一眼看場次，立即完成報名。</h1>
-        <p class="hero-text">提供會員登入、管理者登入、即時場次瀏覽與線上報名。你可以快速查看級數、時間、價格與剩餘名額。</p>
+        <h1>今晚想打球，這裡直接找場。</h1>
+        <p class="hero-text">看場次、看級數、看費用，登入後就能直接報名。</p>
         <div class="hero-actions">
-          <a class="button" href="login.html">會員登入 / 註冊</a>
-          <a class="button button-secondary" href="admin.html">管理者登入</a>
+          <a class="button" href="login.html">會員登入</a>
+          <a class="button button-secondary" href="register.html">立即註冊</a>
         </div>
       </div>
 
       <div class="hero-side">
-        <div class="hero-visual glass-card">
-          <div>
-            <span class="mini-tag">Smash Mode</span>
-            <h3>今晚就上場</h3>
-            <p>從新手友善到強度對打，快速找到適合自己的臨打場。</p>
-          </div>
-          <img class="hero-shuttlecock" src="shuttlecock.svg" alt="羽球圖案">
+        <div class="hero-visual glass-card hero-image-card">
+          <img class="hero-shuttlecock hero-shuttlecock-large" src="shuttlecock.svg" alt="羽球圖案">
         </div>
         <div class="hero-panel glass-card">
           <div class="metric-row">
             <div>
-              <span class="metric-label">即時場次</span>
+              <span class="metric-label">開放場次</span>
               <strong id="heroSessionCount">--</strong>
             </div>
             <div>
@@ -60,7 +56,6 @@
               <strong id="heroSlotsCount">--</strong>
             </div>
           </div>
-          <p class="panel-note">首頁會直接讀取 Supabase 的場次資料。</p>
         </div>
       </div>
     </section>
@@ -71,12 +66,7 @@
         <h2>近期臨打場次</h2>
       </div>
       <div class="filter-row compact">
-        <select id="homeLevelFilter">
-          <option value="">全部級數</option>
-          <option value="新手">新手</option>
-          <option value="進階">進階</option>
-          <option value="老手">老手</option>
-        </select>
+        <select id="homeLevelFilter"></select>
       </div>
     </section>
 

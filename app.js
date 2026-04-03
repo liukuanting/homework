@@ -6,16 +6,7 @@ const supabaseClient =
     ? window.supabase.createClient(cfg.url, cfg.anonKey)
     : null;
 
-const levelOptions = Array.from({ length: 18 }, (_, index) => String(index + 1));
-const levelChartRows = [
-  ["1-3", "入門體驗", "剛接觸羽球，還在熟悉基本揮拍與發球。"],
-  ["4-6", "初階休閒", "可以簡單來回，對規則與雙打站位有基本概念。"],
-  ["7-9", "穩定休閒", "高遠球與平球有一定穩定度，能參與一般臨打。"],
-  ["10-12", "進階對打", "具備基本戰術意識，節奏與跑位明顯提升。"],
-  ["13-15", "比賽型玩家", "攻防轉換快，網前與後場處理成熟。"],
-  ["16-18", "高強度競技", "高節奏高強度，接近校隊或長期比賽型選手。"],
-];
-
+const levels = Array.from({ length: 18 }, (_, index) => String(index + 1));
 let toursCache = [];
 let appState = {
   session: null,
@@ -27,13 +18,15 @@ document.addEventListener("DOMContentLoaded", () => {
   bindGlobalUi();
 
   if (!supabaseClient) {
-    showMessage("authMessage", "請先設定 config.js 裡的 Supabase 參數。", true);
+    showMessage("authMessage", "Please set Supabase config first.", true);
+    showMessage("registerMessage", "Please set Supabase config first.", true);
     return;
   }
 
   startApp().catch((error) => {
     console.error(error);
-    showMessage("authMessage", error.message || "初始化失敗。", true);
+    showMessage("authMessage", error.message || "App init failed.", true);
+    showMessage("registerMessage", error.message || "App init failed.", true);
   });
 });
 
@@ -54,13 +47,14 @@ async function startApp() {
 
   if (page === "home") await loadHomePage();
   if (page === "login") bindLoginPage();
+  if (page === "register") bindRegisterPage();
   if (page === "dashboard") await loadDashboardPage();
   if (page === "admin") await loadAdminPage();
 }
 
 function bindGlobalUi() {
   document.getElementById("logoutButton")?.addEventListener("click", async () => {
-    await supabaseClient?.auth.signOut();
+    await supabaseClient.auth.signOut();
     window.location.href = "login.html";
   });
 }
@@ -77,7 +71,6 @@ async function refreshIdentity() {
   }
 
   appState.profile = await ensureProfile(appState.user);
-
   if (navUser) {
     navUser.textContent =
       appState.profile?.full_name ||
@@ -85,38 +78,37 @@ async function refreshIdentity() {
       appState.user.email ||
       "";
   }
-
   logoutButton?.classList.remove("is-hidden");
 }
 
 async function ensureProfile(user) {
-  const result = await supabaseClient
+  const profileResult = await supabaseClient
     .from("profiles")
     .select("id, full_name, email, is_admin")
     .eq("id", user.id)
     .maybeSingle();
 
-  if (!result.error && result.data) return result.data;
+  if (!profileResult.error && profileResult.data) return profileResult.data;
 
   const payload = {
     id: user.id,
-    full_name: user.user_metadata?.full_name || user.email?.split("@")[0] || "會員",
+    full_name: user.user_metadata?.full_name || user.email?.split("@")[0] || "member",
     email: user.email || "",
     is_admin: false,
   };
 
-  const upsert = await supabaseClient
+  const upsertResult = await supabaseClient
     .from("profiles")
     .upsert(payload, { onConflict: "id" })
     .select("id, full_name, email, is_admin")
     .single();
 
-  if (upsert.error) {
-    console.error("Profile sync failed:", upsert.error);
+  if (upsertResult.error) {
+    console.error(upsertResult.error);
     return payload;
   }
 
-  return upsert.data;
+  return upsertResult.data;
 }
 
 async function fetchTours() {
@@ -132,33 +124,25 @@ async function fetchTours() {
     .order("start_time", { ascending: true });
   if (sessionsResult.error) throw sessionsResult.error;
 
-  const map = {};
-  (sessionsResult.data || []).forEach((session) => {
-    if (!map[session.tour_id]) map[session.tour_id] = [];
-    map[session.tour_id].push(session);
-  });
+  const sessionMap = {};
+  for (const session of sessionsResult.data || []) {
+    if (!sessionMap[session.tour_id]) sessionMap[session.tour_id] = [];
+    sessionMap[session.tour_id].push(session);
+  }
 
   toursCache = (toursResult.data || []).map((tour) => ({
     ...tour,
-    sessions: map[tour.id] || [],
+    sessions: sessionMap[tour.id] || [],
   }));
 
   return toursCache;
 }
 
-function formatDateTime(value) {
-  if (!value) return "-";
-  return new Date(value).toLocaleString("zh-TW", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function formatMoney(value) {
-  return `${currency}${Number(value || 0).toLocaleString("zh-TW")}`;
+function fillLevelSelect(selectId, includeAll = false) {
+  const select = document.getElementById(selectId);
+  if (!select) return;
+  const options = levels.map((level) => `<option value="${level}">${level}</option>`).join("");
+  select.innerHTML = includeAll ? `<option value="">All Levels</option>${options}` : options;
 }
 
 function escapeHtml(value) {
@@ -170,53 +154,111 @@ function escapeHtml(value) {
     .replaceAll("'", "&#39;");
 }
 
-function fillLevelSelect(selectId, includeAll = false) {
-  const select = document.getElementById(selectId);
-  if (!select) return;
-  const options = levelOptions.map((level) => `<option value="${level}">${level} 級</option>`);
-  select.innerHTML = includeAll
-    ? `<option value="">全部級數</option>${options.join("")}`
-    : options.join("");
+function formatMoney(value) {
+  return `${currency}${Number(value || 0).toLocaleString("zh-TW")}`;
 }
 
-function renderCards(tours, canBook = false) {
+function formatDateTime(value) {
+  if (!value) return "-";
+  return new Date(value).toLocaleString("zh-TW", {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function toDateOnly(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toISOString().slice(0, 10);
+}
+
+function extractMeta(description) {
+  const raw = String(description || "");
+  const scheduleMatch = raw.match(/^\[\[TIME\]\](.+)$/m);
+  const detail = raw.replace(/^\[\[TIME\]\].+$/m, "").trim();
+  return {
+    schedule: scheduleMatch ? scheduleMatch[1].trim() : "",
+    detail,
+  };
+}
+
+function buildDescription(schedule, detail) {
+  const parts = [];
+  if (schedule) parts.push(`[[TIME]]${schedule}`);
+  if (detail) parts.push(detail);
+  return parts.join("\n");
+}
+
+function parseScheduleToIso(scheduleText) {
+  const value = String(scheduleText || "").trim();
+  const match = value.match(/^(\d{1,4})[\/-](\d{1,2})(?:[\/-](\d{1,2}))?\s+(\d{1,2}):(\d{2})\s*[-~]\s*(\d{1,2}):(\d{2})$/);
+  if (!match) {
+    throw new Error("Use format like 4/12 19:00-21:00 or 2026-04-12 19:00-21:00");
+  }
+
+  let year = new Date().getFullYear();
+  let month;
+  let day;
+
+  if (match[3]) {
+    year = Number(match[1]);
+    month = Number(match[2]);
+    day = Number(match[3]);
+  } else {
+    month = Number(match[1]);
+    day = Number(match[2]);
+  }
+
+  const hour = Number(match[4]);
+  const minute = Number(match[5]);
+  const date = new Date(year, month - 1, day, hour, minute);
+  if (Number.isNaN(date.getTime())) {
+    throw new Error("Time format cannot be parsed.");
+  }
+
+  return date.toISOString();
+}
+
+function renderCards(tours, canBook) {
   const cards = [];
-  tours.forEach((tour) => {
-    (tour.sessions || []).forEach((session) => {
+
+  for (const tour of tours) {
+    const meta = extractMeta(tour.description);
+    for (const session of tour.sessions || []) {
       cards.push(`
         <article class="session-card">
           <div class="session-top">
-            <span class="level-badge">${escapeHtml(tour.level)} 級</span>
-            <span class="slot-badge">${session.remaining_slots}/${session.capacity} 名</span>
+            <span class="level-badge">Level ${escapeHtml(tour.level)}</span>
+            <span class="slot-badge">${session.remaining_slots}/${session.capacity}</span>
           </div>
           <h3>${escapeHtml(tour.title)}</h3>
-          <p>${escapeHtml(tour.description || "尚未填寫說明")}</p>
+          <p>${escapeHtml(meta.detail || "Badminton session open for booking.")}</p>
           <dl class="session-meta">
-            <div><dt>時間</dt><dd>${formatDateTime(session.start_time)}</dd></div>
-            <div><dt>費用</dt><dd>${formatMoney(tour.price)}</dd></div>
-            <div><dt>地點</dt><dd>${escapeHtml(tour.location || "待公告")}</dd></div>
+            <div><dt>Time</dt><dd>${escapeHtml(meta.schedule || formatDateTime(session.start_time))}</dd></div>
+            <div><dt>Location</dt><dd>${escapeHtml(tour.location || "-")}</dd></div>
+            <div><dt>Price</dt><dd>${formatMoney(tour.price)}</dd></div>
           </dl>
           ${
             canBook
-              ? `<button class="button book-button" data-session-id="${session.id}">我要報名</button>`
-              : `<a class="button button-secondary" href="login.html">登入後報名</a>`
+              ? `<button class="button book-button" data-session-id="${session.id}">Book Now</button>`
+              : `<a class="button button-secondary" href="login.html">Login to Book</a>`
           }
         </article>
       `);
-    });
-  });
+    }
+  }
 
-  return cards.length
-    ? cards.join("")
-    : '<div class="empty-state">目前沒有符合條件的場次。</div>';
+  return cards.length ? cards.join("") : '<div class="empty-state">No sessions found.</div>';
 }
 
-function filterTours({ date = "", level = "" } = {}) {
+function filterTours(date, level) {
   return toursCache
     .map((tour) => {
       let sessions = [...(tour.sessions || [])];
-      if (date) sessions = sessions.filter((item) => item.start_time.startsWith(date));
-      if (level && String(tour.level) !== String(level)) sessions = [];
+      if (date) sessions = sessions.filter((item) => toDateOnly(item.start_time) === date);
+      if (level) sessions = String(tour.level) === String(level) ? sessions : [];
       return { ...tour, sessions };
     })
     .filter((tour) => tour.sessions.length > 0);
@@ -224,11 +266,11 @@ function filterTours({ date = "", level = "" } = {}) {
 
 async function loadHomePage() {
   fillLevelSelect("homeLevelFilter", true);
-  const tours = await fetchTours();
-  renderHomeCards(tours);
-
-  document.getElementById("homeLevelFilter")?.addEventListener("change", (event) => {
-    renderHomeCards(filterTours({ level: event.target.value }));
+  await fetchTours();
+  renderHomeCards(toursCache);
+  document.getElementById("homeLevelFilter")?.addEventListener("change", () => {
+    const level = document.getElementById("homeLevelFilter").value;
+    renderHomeCards(filterTours("", level));
   });
 }
 
@@ -237,20 +279,20 @@ function renderHomeCards(tours) {
   if (container) container.innerHTML = renderCards(tours, false);
 
   const totalSessions = tours.reduce((sum, tour) => sum + (tour.sessions || []).length, 0);
-  const totalSlots = tours.reduce((sum, tour) => {
-    return sum + (tour.sessions || []).reduce((inner, item) => inner + Number(item.remaining_slots || 0), 0);
-  }, 0);
+  const totalSlots = tours.reduce(
+    (sum, tour) => sum + (tour.sessions || []).reduce((inner, item) => inner + Number(item.remaining_slots || 0), 0),
+    0
+  );
 
-  const sessionCounter = document.getElementById("heroSessionCount");
-  const slotCounter = document.getElementById("heroSlotsCount");
-  if (sessionCounter) sessionCounter.textContent = String(totalSessions);
-  if (slotCounter) slotCounter.textContent = String(totalSlots);
+  const sessionCount = document.getElementById("heroSessionCount");
+  const slotCount = document.getElementById("heroSlotsCount");
+  if (sessionCount) sessionCount.textContent = String(totalSessions);
+  if (slotCount) slotCount.textContent = String(totalSlots);
 }
 
 function bindLoginPage() {
   const tabs = document.querySelectorAll("[data-auth-tab]");
   const modeInput = document.getElementById("loginMode");
-
   tabs.forEach((tab) => {
     tab.addEventListener("click", () => {
       tabs.forEach((item) => item.classList.remove("is-active"));
@@ -260,37 +302,38 @@ function bindLoginPage() {
   });
 
   document.getElementById("loginForm")?.addEventListener("submit", handleLogin);
+}
+
+function bindRegisterPage() {
   document.getElementById("registerForm")?.addEventListener("submit", handleRegister);
 }
 
 async function handleLogin(event) {
   event.preventDefault();
-
   const email = document.getElementById("loginEmail").value.trim();
   const password = document.getElementById("loginPassword").value;
-  const mode = document.getElementById("loginMode")?.value || "member";
+  const mode = document.getElementById("loginMode").value;
 
   try {
     const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
     if (error) throw error;
 
-    appState.session = data.session;
     appState.user = data.user;
+    appState.session = data.session;
     appState.profile = await ensureProfile(data.user);
 
     if (mode === "admin" && !appState.profile?.is_admin) {
-      throw new Error("此帳號不是管理者。");
+      throw new Error("This account is not an admin.");
     }
 
     window.location.href = mode === "admin" ? "admin.html" : "dashboard.html";
   } catch (error) {
-    showMessage("authMessage", error.message || "登入失敗。", true);
+    showMessage("authMessage", error.message || "Login failed.", true);
   }
 }
 
 async function handleRegister(event) {
   event.preventDefault();
-
   const fullName = document.getElementById("registerName").value.trim();
   const email = document.getElementById("registerEmail").value.trim();
   const password = document.getElementById("registerPassword").value;
@@ -312,9 +355,9 @@ async function handleRegister(event) {
       return;
     }
 
-    showMessage("authMessage", "註冊成功，請先到 Email 完成驗證。");
+    showMessage("registerMessage", "Registered. Please verify email before login.");
   } catch (error) {
-    showMessage("authMessage", error.message || "註冊失敗。", true);
+    showMessage("registerMessage", error.message || "Register failed.", true);
   }
 }
 
@@ -325,12 +368,10 @@ async function loadDashboardPage() {
   }
 
   fillLevelSelect("sessionLevelFilter", true);
-  fillLevelSelect("createTourLevel", false);
-  renderLevelChart();
 
-  const userLabel = document.getElementById("dashboardUserName");
-  if (userLabel) {
-    userLabel.textContent = appState.profile?.full_name || appState.user.email || "會員";
+  const userName = document.getElementById("dashboardUserName");
+  if (userName) {
+    userName.textContent = appState.profile?.full_name || appState.user.email || "member";
   }
 
   await fetchTours();
@@ -339,31 +380,27 @@ async function loadDashboardPage() {
 
   document.getElementById("sessionDateFilter")?.addEventListener("change", renderDashboardCards);
   document.getElementById("sessionLevelFilter")?.addEventListener("change", renderDashboardCards);
-  document.getElementById("createTourForm")?.addEventListener("submit", createTourFromDashboard);
 }
 
 function renderDashboardCards() {
   const date = document.getElementById("sessionDateFilter")?.value || "";
   const level = document.getElementById("sessionLevelFilter")?.value || "";
-  const filtered = filterTours({ date, level });
-
   const container = document.getElementById("dashboardSessions");
-  if (container) container.innerHTML = renderCards(filtered, true);
+  if (container) container.innerHTML = renderCards(filterTours(date, level), true);
 
   document.querySelectorAll(".book-button").forEach((button) => {
     button.addEventListener("click", async () => {
       try {
-        const sessionId = button.dataset.sessionId;
-        await quickBook(sessionId, 1);
-        showMessage("createTourMessage", "已成功報名該場次。");
+        await createOrder(button.dataset.sessionId, 1);
+        showMessage("bookingMessage", "Booked successfully.");
       } catch (error) {
-        showMessage("createTourMessage", error.message || "報名失敗。", true);
+        showMessage("bookingMessage", error.message || "Booking failed.", true);
       }
     });
   });
 }
 
-async function quickBook(sessionId, quantity) {
+async function createOrder(sessionId, quantity) {
   const sessionResult = await supabaseClient
     .from("sessions")
     .select("id, tour_id, remaining_slots")
@@ -371,113 +408,55 @@ async function quickBook(sessionId, quantity) {
     .single();
   if (sessionResult.error) throw sessionResult.error;
 
-  const selectedSession = sessionResult.data;
-  if (Number(selectedSession.remaining_slots || 0) < quantity) {
-    throw new Error("剩餘名額不足。");
+  const session = sessionResult.data;
+  if (Number(session.remaining_slots || 0) < quantity) {
+    throw new Error("No slots left.");
   }
 
-  const tour = toursCache.find((item) => item.id === selectedSession.tour_id);
-  if (!tour) throw new Error("找不到對應行程。");
+  const tour = toursCache.find((item) => item.id === session.tour_id);
+  if (!tour) throw new Error("Tour not found.");
 
   const orderResult = await supabaseClient.from("orders").insert({
     user_id: appState.user.id,
     tour_id: tour.id,
-    session_id: selectedSession.id,
+    session_id: session.id,
     quantity,
     total_amount: Number(tour.price || 0) * quantity,
   });
   if (orderResult.error) throw orderResult.error;
 
-  const slotResult = await supabaseClient
+  const updateResult = await supabaseClient
     .from("sessions")
-    .update({ remaining_slots: Number(selectedSession.remaining_slots) - quantity })
-    .eq("id", selectedSession.id);
-  if (slotResult.error) throw slotResult.error;
+    .update({ remaining_slots: Number(session.remaining_slots) - quantity })
+    .eq("id", session.id);
+  if (updateResult.error) throw updateResult.error;
 
   await fetchTours();
   renderDashboardCards();
   await loadMyOrders();
 }
 
-async function createTourFromDashboard(event) {
-  event.preventDefault();
-
-  try {
-    const title = document.getElementById("createTourTitle").value.trim();
-    const startTime = document.getElementById("createTourTime").value;
-    const level = document.getElementById("createTourLevel").value;
-    const location = document.getElementById("createTourLocation").value.trim();
-    const price = Number(document.getElementById("createTourPrice").value || 0);
-    const capacity = Number(document.getElementById("createTourCapacity").value || 0);
-    const description = document.getElementById("createTourDescription").value.trim();
-
-    const tourInsert = await supabaseClient
-      .from("tours")
-      .insert({
-        title,
-        description: description || `會員建立的 ${level} 級臨打行程`,
-        level,
-        price,
-        location: location || "待公告",
-      })
-      .select("id")
-      .single();
-    if (tourInsert.error) throw tourInsert.error;
-
-    const sessionInsert = await supabaseClient
-      .from("sessions")
-      .insert({
-        tour_id: tourInsert.data.id,
-        start_time: new Date(startTime).toISOString(),
-        capacity,
-        remaining_slots: capacity,
-      });
-    if (sessionInsert.error) throw sessionInsert.error;
-
-    event.target.reset();
-    fillLevelSelect("createTourLevel", false);
-    showMessage("createTourMessage", "行程建立成功。");
-    await fetchTours();
-    renderDashboardCards();
-  } catch (error) {
-    showMessage("createTourMessage", error.message || "建立行程失敗。", true);
-  }
-}
-
-function renderLevelChart() {
-  const container = document.getElementById("levelChart");
-  if (!container) return;
-
-  container.innerHTML = renderTable(
-    ["級數", "程度", "說明"],
-    levelChartRows.map((row) => row.map((cell) => escapeHtml(cell)))
-  );
-}
-
 async function loadMyOrders() {
-  try {
-    const { data, error } = await supabaseClient
-      .from("orders")
-      .select("id, quantity, total_amount, created_at, tours(title, level), sessions(start_time)")
-      .eq("user_id", appState.user.id)
-      .order("created_at", { ascending: false });
-    if (error) throw error;
+  const result = await supabaseClient
+    .from("orders")
+    .select("id, quantity, total_amount, created_at, tours(title, level), sessions(start_time)")
+    .eq("user_id", appState.user.id)
+    .order("created_at", { ascending: false });
+  if (result.error) throw result.error;
 
-    const container = document.getElementById("orderHistory");
-    container.innerHTML = (data || []).length
-      ? renderTable(
-          ["日期", "行程", "級數", "人數", "金額"],
-          data.map((order) => [
-            formatDateTime(order.created_at),
-            escapeHtml(order.tours?.title || "-"),
-            escapeHtml(order.tours?.level || "-"),
-            `${order.quantity} 人`,
-            formatMoney(order.total_amount),
-          ])
-        )
-      : '<div class="empty-state">目前還沒有報名紀錄。</div>';
-  } catch (error) {
-    showMessage("createTourMessage", error.message || "讀取訂單失敗。", true);
+  const rows = (result.data || []).map((order) => [
+    formatDateTime(order.created_at),
+    escapeHtml(order.tours?.title || "-"),
+    escapeHtml(order.tours?.level || "-"),
+    `${order.quantity}`,
+    formatMoney(order.total_amount),
+  ]);
+
+  const container = document.getElementById("orderHistory");
+  if (container) {
+    container.innerHTML = rows.length
+      ? renderTable(["Date", "Tour", "Level", "Qty", "Amount"], rows)
+      : '<div class="empty-state">No orders yet.</div>';
   }
 }
 
@@ -492,217 +471,197 @@ async function loadAdminPage() {
     return;
   }
 
-  const adminLabel = document.getElementById("adminUserName");
-  if (adminLabel) {
-    adminLabel.textContent = appState.profile?.full_name || appState.user.email || "管理者";
+  fillLevelSelect("tourLevel", false);
+
+  const adminName = document.getElementById("adminUserName");
+  if (adminName) {
+    adminName.textContent = appState.profile?.full_name || appState.user.email || "admin";
   }
 
   await fetchTours();
   renderAdminTours();
-  renderAdminSessions();
   await loadAdminOrders();
 
-  document.getElementById("tourForm")?.addEventListener("submit", saveTour);
-  document.getElementById("sessionForm")?.addEventListener("submit", saveSession);
+  document.getElementById("tourForm")?.addEventListener("submit", saveAdminTour);
+  document.getElementById("tourResetButton")?.addEventListener("click", resetAdminForm);
   document.getElementById("refreshOrders")?.addEventListener("click", loadAdminOrders);
 }
 
 function renderAdminTours() {
-  const rows = toursCache.map((tour) => [
-    escapeHtml(tour.title),
-    `${escapeHtml(tour.level)} 級`,
-    formatMoney(tour.price),
-    escapeHtml(tour.location || "-"),
-    `<div class="inline-actions">
-      <button class="button button-secondary small-button" data-edit-tour="${tour.id}">編輯</button>
-      <button class="button danger-button small-button" data-delete-tour="${tour.id}">刪除</button>
-    </div>`,
-  ]);
+  const rows = toursCache.flatMap((tour) => {
+    const meta = extractMeta(tour.description);
+    return (tour.sessions || []).map((session) => [
+      escapeHtml(tour.title),
+      escapeHtml(meta.schedule || formatDateTime(session.start_time)),
+      escapeHtml(tour.level),
+      escapeHtml(tour.location || "-"),
+      formatMoney(tour.price),
+      `${session.remaining_slots}/${session.capacity}`,
+      escapeHtml(meta.detail || "-"),
+      `<div class="inline-actions">
+        <button class="button button-secondary small-button" data-edit-tour="${tour.id}" data-edit-session="${session.id}">Edit</button>
+        <button class="button danger-button small-button" data-delete-tour="${tour.id}" data-delete-session="${session.id}">Delete</button>
+      </div>`,
+    ]);
+  });
 
-  document.getElementById("tourTable").innerHTML = rows.length
-    ? renderTable(["標題", "級數", "費用", "地點", "操作"], rows)
-    : '<div class="empty-state">尚未建立任何行程。</div>';
+  const table = document.getElementById("tourTable");
+  if (table) {
+    table.innerHTML = rows.length
+      ? renderTable(["Title", "Time", "Level", "Location", "Price", "Slots", "Description", "Actions"], rows)
+      : '<div class="empty-state">No tour data yet.</div>';
+  }
 
-  const options = toursCache.map((tour) => `<option value="${tour.id}">${escapeHtml(tour.title)}</option>`);
-  document.getElementById("sessionTourId").innerHTML = `<option value="">請選擇行程</option>${options.join("")}`;
-  document.getElementById("orderTourFilter").innerHTML = `<option value="">全部行程</option>${options.join("")}`;
+  const tourOptions = toursCache.map((tour) => `<option value="${tour.id}">${escapeHtml(tour.title)}</option>`).join("");
+  const orderFilter = document.getElementById("orderTourFilter");
+  if (orderFilter) {
+    orderFilter.innerHTML = `<option value="">All Tours</option>${tourOptions}`;
+  }
 
   document.querySelectorAll("[data-edit-tour]").forEach((button) => {
-    button.addEventListener("click", () => fillTourForm(button.dataset.editTour));
+    button.addEventListener("click", () => fillAdminForm(button.dataset.editTour, button.dataset.editSession));
   });
   document.querySelectorAll("[data-delete-tour]").forEach((button) => {
-    button.addEventListener("click", () => deleteTour(button.dataset.deleteTour));
+    button.addEventListener("click", () => deleteAdminTour(button.dataset.deleteTour, button.dataset.deleteSession));
   });
 }
 
-function renderAdminSessions() {
-  const sessions = toursCache.flatMap((tour) =>
-    (tour.sessions || []).map((session) => ({
-      ...session,
-      tourTitle: tour.title,
-    }))
-  );
+function fillAdminForm(tourId, sessionId) {
+  const tour = toursCache.find((item) => item.id === tourId);
+  const session = tour?.sessions?.find((item) => item.id === sessionId);
+  if (!tour || !session) return;
 
-  const rows = sessions.map((session) => [
-    escapeHtml(session.tourTitle),
-    formatDateTime(session.start_time),
-    `${session.remaining_slots}/${session.capacity}`,
-    `<div class="inline-actions">
-      <button class="button button-secondary small-button" data-edit-session="${session.id}">編輯</button>
-      <button class="button danger-button small-button" data-delete-session="${session.id}">刪除</button>
-    </div>`,
-  ]);
-
-  document.getElementById("sessionTable").innerHTML = rows.length
-    ? renderTable(["行程", "時間", "名額", "操作"], rows)
-    : '<div class="empty-state">目前沒有檔期。</div>';
-
-  document.querySelectorAll("[data-edit-session]").forEach((button) => {
-    button.addEventListener("click", () => fillSessionForm(button.dataset.editSession));
-  });
-  document.querySelectorAll("[data-delete-session]").forEach((button) => {
-    button.addEventListener("click", () => deleteSession(button.dataset.deleteSession));
-  });
-}
-
-function fillTourForm(tourId) {
-  const tour = toursCache.find((item) => String(item.id) === String(tourId));
-  if (!tour) return;
+  const meta = extractMeta(tour.description);
   document.getElementById("tourId").value = tour.id;
+  document.getElementById("sessionId").value = session.id;
   document.getElementById("tourTitle").value = tour.title || "";
+  document.getElementById("tourSchedule").value = meta.schedule || "";
   document.getElementById("tourLevel").value = String(tour.level || "1");
-  document.getElementById("tourPrice").value = tour.price || 0;
   document.getElementById("tourLocation").value = tour.location || "";
-  document.getElementById("tourDescription").value = tour.description || "";
+  document.getElementById("tourPrice").value = Number(tour.price || 0);
+  document.getElementById("tourCapacity").value = Number(session.capacity || 0);
+  document.getElementById("tourDescription").value = meta.detail || "";
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-function fillSessionForm(sessionId) {
-  const session = toursCache
-    .flatMap((tour) => tour.sessions || [])
-    .find((item) => String(item.id) === String(sessionId));
-  if (!session) return;
-  document.getElementById("adminSessionId").value = session.id;
-  document.getElementById("sessionTourId").value = session.tour_id;
-  document.getElementById("sessionStartTime").value = toDatetimeLocal(session.start_time);
-  document.getElementById("sessionCapacity").value = session.capacity || 0;
-  document.getElementById("sessionRemaining").value = session.remaining_slots || 0;
+function resetAdminForm() {
+  document.getElementById("tourForm")?.reset();
+  document.getElementById("tourId").value = "";
+  document.getElementById("sessionId").value = "";
+  fillLevelSelect("tourLevel", false);
 }
 
-function toDatetimeLocal(value) {
-  if (!value) return "";
-  const date = new Date(value);
-  const pad = (number) => String(number).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-}
-
-async function saveTour(event) {
+async function saveAdminTour(event) {
   event.preventDefault();
+
   try {
-    const payload = {
+    const tourId = document.getElementById("tourId").value;
+    const sessionId = document.getElementById("sessionId").value;
+    const schedule = document.getElementById("tourSchedule").value.trim();
+    const startTime = parseScheduleToIso(schedule);
+    const description = buildDescription(schedule, document.getElementById("tourDescription").value.trim());
+    const capacity = Number(document.getElementById("tourCapacity").value || 0);
+
+    const tourPayload = {
       title: document.getElementById("tourTitle").value.trim(),
+      description,
       level: document.getElementById("tourLevel").value,
-      price: Number(document.getElementById("tourPrice").value || 0),
       location: document.getElementById("tourLocation").value.trim(),
-      description: document.getElementById("tourDescription").value.trim(),
+      price: Number(document.getElementById("tourPrice").value || 0),
     };
-    const id = document.getElementById("tourId").value;
-    const result = id
-      ? await supabaseClient.from("tours").update(payload).eq("id", id)
-      : await supabaseClient.from("tours").insert(payload);
-    if (result.error) throw result.error;
 
-    event.target.reset();
-    document.getElementById("tourId").value = "";
+    if (tourId) {
+      const updateTour = await supabaseClient.from("tours").update(tourPayload).eq("id", tourId);
+      if (updateTour.error) throw updateTour.error;
+
+      const existingTour = toursCache.find((item) => item.id === tourId);
+      const existingSession = existingTour?.sessions?.find((item) => item.id === sessionId);
+      const remaining = existingSession
+        ? Math.min(Number(existingSession.remaining_slots || 0), capacity)
+        : capacity;
+
+      const updateSession = await supabaseClient
+        .from("sessions")
+        .update({
+          start_time: startTime,
+          capacity,
+          remaining_slots: remaining,
+        })
+        .eq("id", sessionId);
+      if (updateSession.error) throw updateSession.error;
+    } else {
+      const insertTour = await supabaseClient.from("tours").insert(tourPayload).select("id").single();
+      if (insertTour.error) throw insertTour.error;
+
+      const insertSession = await supabaseClient.from("sessions").insert({
+        tour_id: insertTour.data.id,
+        start_time: startTime,
+        capacity,
+        remaining_slots: capacity,
+      });
+      if (insertSession.error) throw insertSession.error;
+    }
+
+    resetAdminForm();
+    showMessage("adminTourMessage", "Tour saved.");
     await fetchTours();
     renderAdminTours();
-    renderAdminSessions();
     await loadAdminOrders();
   } catch (error) {
-    alert(error.message || "儲存行程失敗。");
+    showMessage("adminTourMessage", error.message || "Save failed.", true);
   }
 }
 
-async function deleteTour(tourId) {
-  if (!window.confirm("確定要刪除這個行程嗎？")) return;
+async function deleteAdminTour(tourId, sessionId) {
+  if (!window.confirm("Delete this tour?")) return;
+
   try {
-    const result = await supabaseClient.from("tours").delete().eq("id", tourId);
-    if (result.error) throw result.error;
+    const deleteSession = await supabaseClient.from("sessions").delete().eq("id", sessionId);
+    if (deleteSession.error) throw deleteSession.error;
+
+    const tour = toursCache.find((item) => item.id === tourId);
+    if ((tour?.sessions?.length || 0) <= 1) {
+      const deleteTour = await supabaseClient.from("tours").delete().eq("id", tourId);
+      if (deleteTour.error) throw deleteTour.error;
+    }
+
     await fetchTours();
     renderAdminTours();
-    renderAdminSessions();
     await loadAdminOrders();
   } catch (error) {
-    alert(error.message || "刪除行程失敗。");
-  }
-}
-
-async function saveSession(event) {
-  event.preventDefault();
-  try {
-    const payload = {
-      tour_id: document.getElementById("sessionTourId").value,
-      start_time: new Date(document.getElementById("sessionStartTime").value).toISOString(),
-      capacity: Number(document.getElementById("sessionCapacity").value || 0),
-      remaining_slots: Number(document.getElementById("sessionRemaining").value || 0),
-    };
-    const id = document.getElementById("adminSessionId").value;
-    const result = id
-      ? await supabaseClient.from("sessions").update(payload).eq("id", id)
-      : await supabaseClient.from("sessions").insert(payload);
-    if (result.error) throw result.error;
-
-    event.target.reset();
-    document.getElementById("adminSessionId").value = "";
-    await fetchTours();
-    renderAdminTours();
-    renderAdminSessions();
-  } catch (error) {
-    alert(error.message || "儲存檔期失敗。");
-  }
-}
-
-async function deleteSession(sessionId) {
-  if (!window.confirm("確定要刪除這個檔期嗎？")) return;
-  try {
-    const result = await supabaseClient.from("sessions").delete().eq("id", sessionId);
-    if (result.error) throw result.error;
-    await fetchTours();
-    renderAdminSessions();
-  } catch (error) {
-    alert(error.message || "刪除檔期失敗。");
+    showMessage("adminTourMessage", error.message || "Delete failed.", true);
   }
 }
 
 async function loadAdminOrders() {
-  try {
-    const date = document.getElementById("orderDateFilter")?.value || "";
-    const tourId = document.getElementById("orderTourFilter")?.value || "";
+  const date = document.getElementById("orderDateFilter")?.value || "";
+  const tourId = document.getElementById("orderTourFilter")?.value || "";
 
-    let query = supabaseClient
-      .from("orders")
-      .select("id, quantity, total_amount, created_at, profiles(full_name, email), sessions(start_time), tours(title)")
-      .order("created_at", { ascending: false });
+  let query = supabaseClient
+    .from("orders")
+    .select("id, quantity, total_amount, created_at, profiles(full_name, email), sessions(start_time), tours(title)")
+    .order("created_at", { ascending: false });
 
-    if (tourId) query = query.eq("tour_id", tourId);
-    if (date) query = query.gte("created_at", `${date}T00:00:00`).lte("created_at", `${date}T23:59:59`);
+  if (tourId) query = query.eq("tour_id", tourId);
+  if (date) query = query.gte("created_at", `${date}T00:00:00`).lte("created_at", `${date}T23:59:59`);
 
-    const { data, error } = await query;
-    if (error) throw error;
+  const result = await query;
+  if (result.error) throw result.error;
 
-    const rows = (data || []).map((order) => [
-      formatDateTime(order.created_at),
-      escapeHtml(order.profiles?.full_name || order.profiles?.email || "-"),
-      escapeHtml(order.tours?.title || "-"),
-      formatDateTime(order.sessions?.start_time),
-      `${order.quantity} 人`,
-      formatMoney(order.total_amount),
-    ]);
+  const rows = (result.data || []).map((order) => [
+    formatDateTime(order.created_at),
+    escapeHtml(order.profiles?.full_name || order.profiles?.email || "-"),
+    escapeHtml(order.tours?.title || "-"),
+    formatDateTime(order.sessions?.start_time),
+    `${order.quantity}`,
+    formatMoney(order.total_amount),
+  ]);
 
-    document.getElementById("adminOrderTable").innerHTML = rows.length
-      ? renderTable(["日期", "會員名稱", "行程", "檔期", "人數", "總金額"], rows)
-      : '<div class="empty-state">查無符合條件的訂單。</div>';
-  } catch (error) {
-    alert(error.message || "讀取訂單失敗。");
+  const container = document.getElementById("adminOrderTable");
+  if (container) {
+    container.innerHTML = rows.length
+      ? renderTable(["Date", "Member", "Tour", "Session", "Qty", "Amount"], rows)
+      : '<div class="empty-state">No matching orders.</div>';
   }
 }
 

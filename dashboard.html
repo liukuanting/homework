@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>會員中心 | 羽球臨打報名系統</title>
-  <meta name="description" content="會員瀏覽場次、即時報名與查詢訂單。">
+  <title>會員中心</title>
+  <meta name="description" content="會員瀏覽場次、快速報名與查看訂單紀錄。">
   <link rel="stylesheet" href="styles.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
@@ -20,7 +20,8 @@
       <a href="index.html">首頁</a>
       <a href="dashboard.html" class="is-active">會員中心</a>
       <a href="admin.html">管理後台</a>
-      <a href="login.html">登入 / 註冊</a>
+      <a href="login.html">會員登入</a>
+      <a href="register.html">註冊</a>
     </nav>
     <div class="auth-actions">
       <span id="navUserEmail" class="user-pill"></span>
@@ -31,59 +32,28 @@
   <main class="page-shell">
     <section class="section-header">
       <div>
-        <p class="eyebrow">User Side</p>
+        <p class="eyebrow">Member Center</p>
         <h1>會員中心</h1>
       </div>
       <div class="glass-card welcome-card">
-        <p>可依時間與新手 / 老手等級瀏覽場次，並立即報名。</p>
-        <strong id="dashboardUserName">尚未登入</strong>
+        <p>登入成功後會直接進到這裡。</p>
+        <strong id="dashboardUserName">讀取中...</strong>
       </div>
     </section>
 
-    <section class="two-column">
-      <div class="glass-card">
-        <div class="section-header stacked">
-          <div>
-            <p class="eyebrow">Product List</p>
-            <h2>行程瀏覽</h2>
-          </div>
-          <p>依日期與級數篩選場次，每項顯示說明、費用與時間。</p>
+    <section class="glass-card">
+      <div class="section-header stacked">
+        <div>
+          <p class="eyebrow">Sessions</p>
+          <h2>可報名場次</h2>
         </div>
-        <div class="filter-row">
-          <input id="sessionDateFilter" type="date">
-          <select id="sessionLevelFilter">
-            <option value="">全部級數</option>
-            <option value="新手">新手</option>
-            <option value="進階">進階</option>
-            <option value="老手">老手</option>
-          </select>
-        </div>
-        <div id="dashboardSessions" class="card-grid compact-grid"></div>
       </div>
-
-      <div class="glass-card">
-        <div class="section-header stacked">
-          <div>
-            <p class="eyebrow">Order Flow</p>
-            <h2>快速報名</h2>
-          </div>
-          <p>選擇檔期與人數後按下「我要報名」，系統會自動寫入 orders 並同步減少名額。</p>
-        </div>
-        <form id="bookingForm" class="form-card">
-          <label>
-            <span>檔期</span>
-            <select id="bookingSessionId" required>
-              <option value="">請先選擇場次</option>
-            </select>
-          </label>
-          <label>
-            <span>人數</span>
-            <input id="bookingQuantity" type="number" min="1" value="1" required>
-          </label>
-          <button class="button" type="submit">我要報名</button>
-        </form>
-        <div id="bookingMessage" class="message-box"></div>
+      <div class="filter-row">
+        <input id="sessionDateFilter" type="date">
+        <select id="sessionLevelFilter"></select>
       </div>
+      <div id="dashboardSessions" class="card-grid compact-grid"></div>
+      <div id="bookingMessage" class="message-box"></div>
     </section>
 
     <section class="glass-card">
@@ -92,7 +62,6 @@
           <p class="eyebrow">Order History</p>
           <h2>訂單紀錄</h2>
         </div>
-        <p>顯示使用者所有報名紀錄、日期與金額。</p>
       </div>
       <div id="orderHistory" class="table-shell"></div>
     </section>

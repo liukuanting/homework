@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>管理後台 | 羽球臨打報名系統</title>
-  <meta name="description" content="管理者可維護行程、檔期與訂單。">
+  <title>管理後台</title>
+  <meta name="description" content="管理行程、檔期與訂單。">
   <link rel="stylesheet" href="styles.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
@@ -20,7 +20,8 @@
       <a href="index.html">首頁</a>
       <a href="dashboard.html">會員中心</a>
       <a href="admin.html" class="is-active">管理後台</a>
-      <a href="login.html">登入 / 註冊</a>
+      <a href="login.html">會員登入</a>
+      <a href="register.html">註冊</a>
     </nav>
     <div class="auth-actions">
       <span id="navUserEmail" class="user-pill"></span>
@@ -32,86 +33,59 @@
     <section class="section-header">
       <div>
         <p class="eyebrow">Admin Side</p>
-        <h1>後台管理</h1>
+        <h1>管理後台</h1>
       </div>
       <div class="glass-card welcome-card">
-        <p>限 `is_admin = true` 的帳號登入，登入後自動導向本頁。</p>
-        <strong id="adminUserName">驗證中...</strong>
+        <p>管理行程、檔期與訂單資料。</p>
+        <strong id="adminUserName">讀取中...</strong>
       </div>
     </section>
 
-    <section class="admin-grid">
-      <div class="glass-card">
-        <div class="section-header stacked">
-          <div>
-            <p class="eyebrow">Tour Management</p>
-            <h2>行程管理</h2>
-          </div>
-          <p>新增 / 修改 / 刪除行程，管理級數、價格、地點與說明。</p>
+    <section class="glass-card">
+      <div class="section-header stacked">
+        <div>
+          <p class="eyebrow">Tour Management</p>
+          <h2>行程管理</h2>
         </div>
-        <form id="tourForm" class="form-card">
-          <input id="tourId" type="hidden">
-          <label>
-            <span>標題</span>
-            <input id="tourTitle" type="text" required>
-          </label>
-          <label>
-            <span>級數</span>
-            <select id="tourLevel" required>
-              <option value="新手">新手</option>
-              <option value="進階">進階</option>
-              <option value="老手">老手</option>
-            </select>
-          </label>
-          <label>
-            <span>費用</span>
-            <input id="tourPrice" type="number" min="0" required>
-          </label>
-          <label>
-            <span>地點</span>
-            <input id="tourLocation" type="text" placeholder="台北市中正區羽球館">
-          </label>
-          <label>
-            <span>說明</span>
-            <textarea id="tourDescription" rows="4"></textarea>
-          </label>
+      </div>
+      <form id="tourForm" class="form-card admin-tour-form">
+        <input id="tourId" type="hidden">
+        <input id="sessionId" type="hidden">
+        <label>
+          <span>行程標題</span>
+          <input id="tourTitle" type="text" required>
+        </label>
+        <label>
+          <span>時間</span>
+          <input id="tourSchedule" type="text" placeholder="例如：4/12 19:00-21:00" required>
+        </label>
+        <label>
+          <span>級數</span>
+          <select id="tourLevel" required></select>
+        </label>
+        <label>
+          <span>地點</span>
+          <input id="tourLocation" type="text" required>
+        </label>
+        <label>
+          <span>費用</span>
+          <input id="tourPrice" type="number" min="0" required>
+        </label>
+        <label>
+          <span>名額</span>
+          <input id="tourCapacity" type="number" min="1" required>
+        </label>
+        <label class="form-span-2">
+          <span>說明</span>
+          <textarea id="tourDescription" rows="4"></textarea>
+        </label>
+        <div class="inline-actions form-span-2">
           <button class="button" type="submit">儲存行程</button>
-        </form>
-        <div id="tourTable" class="table-shell"></div>
-      </div>
-
-      <div class="glass-card">
-        <div class="section-header stacked">
-          <div>
-            <p class="eyebrow">Session Management</p>
-            <h2>檔期管理</h2>
-          </div>
-          <p>新增 / 刪除檔期與名額，並即時更新剩餘名額。</p>
+          <button id="tourResetButton" class="button button-secondary" type="button">清空表單</button>
         </div>
-        <form id="sessionForm" class="form-card">
-          <input id="adminSessionId" type="hidden">
-          <label>
-            <span>對應行程</span>
-            <select id="sessionTourId" required>
-              <option value="">請選擇行程</option>
-            </select>
-          </label>
-          <label>
-            <span>開始時間</span>
-            <input id="sessionStartTime" type="datetime-local" required>
-          </label>
-          <label>
-            <span>總名額</span>
-            <input id="sessionCapacity" type="number" min="1" required>
-          </label>
-          <label>
-            <span>剩餘名額</span>
-            <input id="sessionRemaining" type="number" min="0" required>
-          </label>
-          <button class="button" type="submit">儲存檔期</button>
-        </form>
-        <div id="sessionTable" class="table-shell"></div>
-      </div>
+      </form>
+      <div id="adminTourMessage" class="message-box"></div>
+      <div id="tourTable" class="table-shell"></div>
     </section>
 
     <section class="glass-card">
@@ -125,7 +99,7 @@
           <select id="orderTourFilter">
             <option value="">全部行程</option>
           </select>
-          <button id="refreshOrders" class="button button-secondary" type="button">查詢訂單</button>
+          <button id="refreshOrders" class="button button-secondary" type="button">重新整理</button>
         </div>
       </div>
       <div id="adminOrderTable" class="table-shell"></div>
