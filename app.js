@@ -527,8 +527,6 @@ async function loadAdminPage() {
     return;
   }
 
-  fillLevelSelect("tourLevel", false);
-
   const adminName = document.getElementById("adminUserName");
   if (adminName) {
     adminName.textContent = appState.profile?.full_name || appState.user.email || "admin";
@@ -628,7 +626,6 @@ function resetAdminForm() {
   document.getElementById("tourForm")?.reset();
   document.getElementById("tourId").value = "";
   document.getElementById("sessionId").value = "";
-  fillLevelSelect("tourLevel", false);
 }
 
 async function saveAdminTour(event) {
