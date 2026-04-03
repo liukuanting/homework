@@ -1,0 +1,12 @@
+Supabase import note
+
+1. profiles_import.csv can be imported into the profiles table only if your table has matching columns.
+2. Email/password login accounts are stored in Supabase Auth, not just in profiles.
+3. If you only import the CSV into profiles, those members will not automatically be able to login with a password.
+4. The recommended flow is:
+   - create users in Supabase Auth first
+   - let trigger or app code create/update profiles
+5. If your profiles table currently only has columns like id and created_at, you need to add:
+   - full_name
+   - email
+   - is_admin

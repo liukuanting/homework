@@ -1,0 +1,25 @@
+<svg width="420" height="420" viewBox="0 0 420 420" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="cone" x1="210" y1="42" x2="210" y2="240" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFDF7"/>
+      <stop offset="1" stop-color="#DCE7E2"/>
+    </linearGradient>
+    <linearGradient id="base" x1="210" y1="236" x2="210" y2="330" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FF9B38"/>
+      <stop offset="1" stop-color="#D95E1E"/>
+    </linearGradient>
+  </defs>
+  <rect width="420" height="420" rx="42" fill="#0A2A22"/>
+  <path d="M117 56L188 244" stroke="url(#cone)" stroke-width="20" stroke-linecap="round"/>
+  <path d="M168 43L205 243" stroke="url(#cone)" stroke-width="20" stroke-linecap="round"/>
+  <path d="M210 36L221 244" stroke="url(#cone)" stroke-width="20" stroke-linecap="round"/>
+  <path d="M252 43L236 243" stroke="url(#cone)" stroke-width="20" stroke-linecap="round"/>
+  <path d="M303 56L252 244" stroke="url(#cone)" stroke-width="20" stroke-linecap="round"/>
+  <path d="M111 70C152 107 180 124 210 131C240 124 268 107 309 70" stroke="#9ED8C1" stroke-width="8" stroke-linecap="round"/>
+  <path d="M95 120C143 150 175 166 210 172C245 166 277 150 325 120" stroke="#9ED8C1" stroke-width="8" stroke-linecap="round"/>
+  <path d="M83 173C137 196 172 208 210 212C248 208 283 196 337 173" stroke="#9ED8C1" stroke-width="8" stroke-linecap="round"/>
+  <ellipse cx="210" cy="272" rx="82" ry="44" fill="url(#base)"/>
+  <ellipse cx="210" cy="260" rx="82" ry="44" fill="#FFBF73"/>
+  <ellipse cx="210" cy="255" rx="62" ry="30" fill="#FFE3BD"/>
+  <path d="M150 277C169 290 186 296 210 298C234 296 251 290 270 277" stroke="#A74314" stroke-width="10" stroke-linecap="round"/>
+</svg>
