@@ -99,41 +99,12 @@ async function ensureProfile(user) {
     throw new Error(`Profile read failed: ${profileResult.error.message}`);
   }
 
-  const payload = {
+  return {
     id: user.id,
     full_name: user.user_metadata?.full_name || user.email?.split("@")[0] || "member",
     email: user.email || "",
+    is_admin: false,
   };
-
-  const insertResult = await supabaseClient
-    .from("profiles")
-    .insert(payload)
-    .select("id, full_name, email, is_admin")
-    .single();
-
-  if (insertResult.error) {
-    const duplicate =
-      insertResult.error.code === "23505" ||
-      String(insertResult.error.message || "").toLowerCase().includes("duplicate");
-
-    if (duplicate) {
-      const existingResult = await supabaseClient
-        .from("profiles")
-        .select("id, full_name, email, is_admin")
-        .eq("id", user.id)
-        .single();
-
-      if (existingResult.error) {
-        throw new Error(`Profile reload failed: ${existingResult.error.message}`);
-      }
-
-      return existingResult.data;
-    }
-
-    throw new Error(`Profile create failed: ${insertResult.error.message}`);
-  }
-
-  return insertResult.data;
 }
 
 async function fetchTours() {
