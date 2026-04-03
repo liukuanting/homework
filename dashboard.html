@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>會員中心 | 羽球臨打報名系統</title>
-  <meta name="description" content="會員瀏覽場次、報名與查詢訂單。">
+  <meta name="description" content="會員瀏覽場次、即時報名與查詢訂單。">
   <link rel="stylesheet" href="assets/styles.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="assets/config.js"></script>
@@ -35,7 +35,7 @@
         <h1>會員中心</h1>
       </div>
       <div class="glass-card welcome-card">
-        <p>登入後可瀏覽場次、直接報名、查詢訂單紀錄。</p>
+        <p>可依時間與新手 / 老手等級瀏覽場次，並立即報名。</p>
         <strong id="dashboardUserName">尚未登入</strong>
       </div>
     </section>
@@ -47,7 +47,7 @@
             <p class="eyebrow">Product List</p>
             <h2>行程瀏覽</h2>
           </div>
-          <p>可依時間與級數篩選場次。</p>
+          <p>依日期與級數篩選場次，每項顯示說明、費用與時間。</p>
         </div>
         <div class="filter-row">
           <input id="sessionDateFilter" type="date">
@@ -67,7 +67,7 @@
             <p class="eyebrow">Order Flow</p>
             <h2>快速報名</h2>
           </div>
-          <p>選擇檔期與人數後，直接寫入 orders 並同步扣除名額。</p>
+          <p>選擇檔期與人數後按下「我要報名」，系統會自動寫入 orders 並同步減少名額。</p>
         </div>
         <form id="bookingForm" class="form-card">
           <label>
@@ -92,7 +92,7 @@
           <p class="eyebrow">Order History</p>
           <h2>訂單紀錄</h2>
         </div>
-        <p>顯示會員所有報名日期、檔期與總金額。</p>
+        <p>顯示使用者所有報名紀錄、日期與金額。</p>
       </div>
       <div id="orderHistory" class="table-shell"></div>
     </section>

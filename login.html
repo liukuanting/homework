@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>登入 / 註冊 | 羽球臨打報名系統</title>
-  <meta name="description" content="會員登入、管理者登入與註冊頁面。">
+  <meta name="description" content="會員登入、管理者登入與會員註冊頁面。">
   <link rel="stylesheet" href="assets/styles.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="assets/config.js"></script>
@@ -35,7 +35,7 @@
           <p class="eyebrow">Account Access</p>
           <h1>會員登入與管理者登入</h1>
         </div>
-        <p>使用 Supabase Auth 進行 Email / 密碼登入，登入後會依照 `is_admin` 權限自動導向。</p>
+        <p>以 Email / 密碼登入系統。管理者需具備 `profiles.is_admin = true` 權限。</p>
       </div>
 
       <div class="auth-tabs">
@@ -45,7 +45,7 @@
 
       <div class="auth-grid">
         <form id="loginForm" class="form-card">
-          <input type="hidden" id="loginMode" value="member">
+          <input id="loginMode" type="hidden" value="member">
           <label>
             <span>Email</span>
             <input id="loginEmail" type="email" placeholder="name@example.com" required>

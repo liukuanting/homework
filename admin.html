@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>管理後台 | 羽球臨打報名系統</title>
-  <meta name="description" content="管理者維護行程、檔期與訂單。">
+  <meta name="description" content="管理者可維護行程、檔期與訂單。">
   <link rel="stylesheet" href="assets/styles.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="assets/config.js"></script>
@@ -35,7 +35,7 @@
         <h1>後台管理</h1>
       </div>
       <div class="glass-card welcome-card">
-        <p>限 `profiles.is_admin = true` 的帳號使用。</p>
+        <p>限 `is_admin = true` 的帳號登入，登入後自動導向本頁。</p>
         <strong id="adminUserName">驗證中...</strong>
       </div>
     </section>
@@ -47,7 +47,7 @@
             <p class="eyebrow">Tour Management</p>
             <h2>行程管理</h2>
           </div>
-          <p>新增、修改、刪除級數、價格、時間說明。</p>
+          <p>新增 / 修改 / 刪除行程，管理級數、價格、地點與說明。</p>
         </div>
         <form id="tourForm" class="form-card">
           <input id="tourId" type="hidden">
@@ -86,7 +86,7 @@
             <p class="eyebrow">Session Management</p>
             <h2>檔期管理</h2>
           </div>
-          <p>新增檔期、刪除檔期，並維護總名額與剩餘名額。</p>
+          <p>新增 / 刪除檔期與名額，並即時更新剩餘名額。</p>
         </div>
         <form id="sessionForm" class="form-card">
           <input id="adminSessionId" type="hidden">
